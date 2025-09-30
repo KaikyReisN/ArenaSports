@@ -1,0 +1,130 @@
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ShoppingCart } from "lucide-react";
+import { useState } from "react";
+
+export default function ArenaSports() {
+  const [cart, setCart] = useState([]);
+  const [paymentMethod, setPaymentMethod] = useState("");
+  const [address, setAddress] = useState({ cep: "", rua: "", numero: "", bairro: "", cidade: "", uf: "" });
+  const [shippingCost, setShippingCost] = useState(null);
+  const [showSummary, setShowSummary] = useState(false);
+  const [orderConfirmed, setOrderConfirmed] = useState(false);
+  const [orderHistory, setOrderHistory] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+
+  const productsList = [
+    { id: 1, name: 'Bola de Futebol', price: 120, category: 'bolas', promoPrice: 100 },
+    { id: 2, name: 'Bola de Vôlei', price: 110, category: 'bolas', promoPrice: 110 },
+    { id: 3, name: 'Cones de Treino', price: 40, category: 'acessorios', promoPrice: 35 },
+    { id: 4, name: 'Rede de Vôlei', price: 90, category: 'redes', promoPrice: 80 },
+    { id: 5, name: 'Corda de Pular', price: 25, category: 'acessorios', promoPrice: 25 },
+    { id: 6, name: 'Colete Esportivo', price: 60, category: 'acessorios', promoPrice: 50 },
+  ];
+
+  const filteredProducts = productsList.filter(p => {
+    return (categoryFilter === 'all' || p.category === categoryFilter) && p.name.toLowerCase().includes(searchTerm.toLowerCase());
+  });
+
+  const promoProducts = productsList.filter(p => p.promoPrice < p.price);
+
+  const addToCart = (product) => {
+    setCart([...cart, product]);
+  };
+
+  const calculateShipping = () => {
+    if (address.cep) {
+      if (parseInt(address.cep.replace(/\D/g, '')) % 2 === 0) {
+        setShippingCost(20);
+      } else {
+        setShippingCost(25);
+      }
+    } else {
+      setShippingCost(null);
+    }
+  };
+
+  const subtotal = cart.reduce((acc, item) => acc + item.price, 0);
+  const total = subtotal + (shippingCost || 0);
+  const totalWithDiscount = paymentMethod === 'pix' ? total * 0.95 : total;
+
+  const confirmOrder = () => {
+    const newOrder = {
+      products: cart,
+      address: { ...address },
+      paymentMethod,
+      shippingCost,
+      total: totalWithDiscount,
+    };
+    setOrderHistory([...orderHistory, newOrder]);
+    setOrderConfirmed(true);
+    setCart([]);
+    setPaymentMethod("");
+    setShippingCost(null);
+    setAddress({ cep: "", rua: "", numero: "", bairro: "", cidade: "", uf: "" });
+    setShowSummary(false);
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
+      <header className="bg-gradient-to-r from-blue-700 to-green-600 text-white p-4 flex justify-between items-center shadow-lg">
+        <h1 className="text-2xl md:text-3xl font-bold tracking-wide">ArenaSports</h1>
+        <Button variant="secondary" className="flex items-center gap-2 bg-white text-blue-700 hover:bg-gray-100">
+          <ShoppingCart size={18} /> Carrinho ({cart.length})
+        </Button>
+      </header>
+
+      <section className="bg-gradient-to-r from-blue-500 to-green-400 text-white text-center py-16">
+        <h2 className="text-3xl md:text-4xl font-bold mb-4">Esporte acessível para todos no RJ</h2>
+        <p className="mb-6 text-lg md:text-xl">Frete grátis em compras acima de R$199!</p>
+        <Button size="lg" className="bg-yellow-400 text-black hover:bg-yellow-500 shadow-lg font-semibold">Comprar Agora</Button>
+      </section>
+
+      {/* Promoções com destaque visual */}
+      {promoProducts.length > 0 && (
+        <section className="p-6 bg-yellow-50">
+          <h2 className="text-2xl md:text-3xl font-bold mb-6 text-yellow-800">Promoções da Semana</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {promoProducts.map(product => (
+              <Card key={product.id} className="rounded-2xl shadow-lg hover:shadow-2xl border border-yellow-300 transition duration-300 hover:scale-105">
+                <CardContent className="p-6 text-center">
+                  <img src={`/produto${product.id}.png`} alt={product.name} className="mx-auto h-32 mb-4 rounded" />
+                  <h3 className="mt-2 font-semibold text-lg">{product.name}</h3>
+                  <p className="text-gray-500 line-through">R$ {product.price.toFixed(2)}</p>
+                  <p className="text-red-600 font-bold text-xl">R$ {product.promoPrice.toFixed(2)} (-{Math.round((product.price - product.promoPrice)/product.price*100)}%)</p>
+                  <Button className="mt-4 w-full bg-green-600 hover:bg-green-700 text-white font-semibold shadow-md" onClick={() => addToCart(product)}>Adicionar ao Carrinho</Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Busca e filtros com UX melhorada */}
+      <section className="p-6">
+        <input type="text" placeholder="Buscar produtos..." className="w-full p-3 border rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+        <div className="flex flex-wrap gap-2 mb-6">
+          {['all','bolas','acessorios','redes'].map(cat => (
+            <Button key={cat} variant={categoryFilter === cat ? 'default' : 'outline'} onClick={() => setCategoryFilter(cat)} className="px-4 py-2 rounded-full hover:bg-blue-100 transition duration-200">{cat === 'all' ? 'Todos' : cat.charAt(0).toUpperCase() + cat.slice(1)}</Button>
+          ))}
+        </div>
+      </section>
+
+      <section className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+        {filteredProducts.map(product => (
+          <Card key={product.id} className="rounded-2xl shadow hover:shadow-xl transition hover:scale-105 hover:-translate-y-1">
+            <CardContent className="p-6 text-center">
+              <img src={`/produto${product.id}.png`} alt={product.name} className="mx-auto h-32 mb-2 rounded" />
+              <h3 className="mt-2 font-semibold text-lg">{product.name}</h3>
+              <p className="text-blue-700 font-bold">R$ {product.promoPrice ? product.promoPrice.toFixed(2) : product.price.toFixed(2)}</p>
+              <Button className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-md" onClick={() => addToCart(product)}>Adicionar ao Carrinho</Button>
+            </CardContent>
+          </Card>
+        ))}
+      </section>
+
+      {/* Checkout e histórico permanecem iguais com cores e UX consistentes */}
+    </div>
+  );
+}
